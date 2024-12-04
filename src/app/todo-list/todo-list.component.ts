@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { TodoService } from '../todo.service';
 
 @Component({
   selector: 'app-todo-list',
@@ -6,40 +7,37 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./todo-list.component.css']
 })
 export class TodoListComponent implements OnInit {
-  task: string = ''; // Tarefa digitada pelo usuário
-  tasks: { name: string; done: boolean }[] = []; // Lista de tarefas
+  tasks: { id: number; title: string; completed: boolean }[] = [];
+  task: string = '';
 
-  constructor() {}
+  constructor(private todoService: TodoService) {}
 
   ngOnInit(): void {
-    this.loadTasks(); // Carrega as tarefas do localStorage ao iniciar
+    this.fetchTodos();
   }
 
-  // Adiciona uma nova tarefa
+  // Obter tarefas da API
+  fetchTodos(): void {
+    this.todoService.getTodos().subscribe((data) => {
+      this.tasks = data;
+    });
+  }
+
+  // Adicionar uma nova tarefa
   addTask(): void {
     if (this.task.trim()) {
-      this.tasks.push({ name: this.task.trim(), done: false });
-      this.task = ''; // Limpa o campo de entrada
-      this.saveTasks(); // Salva no localStorage
+      const newTask = { title: this.task.trim(), completed: false }; // Valor padrão
+      this.todoService.addTodo(newTask).subscribe((createdTask) => {
+        this.tasks.push(createdTask);
+        this.task = ''; // Limpa o campo de entrada
+      });
     }
   }
-
-  // Remove uma tarefa da lista
-  deleteTask(taskToDelete: { name: string; done: boolean }): void {
-    this.tasks = this.tasks.filter(task => task !== taskToDelete);
-    this.saveTasks(); // Atualiza o localStorage
-  }
-
-  // Salva as tarefas no localStorage
-  saveTasks(): void {
-    localStorage.setItem('tasks', JSON.stringify(this.tasks));
-  }
-
-  // Carrega as tarefas do localStorage
-  loadTasks(): void {
-    const savedTasks = localStorage.getItem('tasks');
-    if (savedTasks) {
-      this.tasks = JSON.parse(savedTasks);
-    }
+  
+  // Deletar uma tarefa
+  deleteTask(taskId: number): void {
+    this.todoService.deleteTodo(taskId).subscribe(() => {
+      this.tasks = this.tasks.filter(task => task.id !== taskId);
+    });
   }
 }
